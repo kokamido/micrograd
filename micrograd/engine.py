@@ -2,8 +2,9 @@
 class Value:
     """ stores a single scalar value and its gradient """
 
-    def __init__(self, data, _children=(), _op=''):
-        self.data = data
+    def __init__(self, data, label, _children=(), _op=''):
+        self.data = float(data)
+        self.label = label
         self.grad = 0
         # internal variables used for autograd graph construction
         self._backward = lambda: None
@@ -11,8 +12,8 @@ class Value:
         self._op = _op # the op that produced this node, for graphviz / debugging / etc
 
     def __add__(self, other):
-        other = other if isinstance(other, Value) else Value(other)
-        out = Value(self.data + other.data, (self, other), '+')
+        other = other if isinstance(other, Value) else Value(other, label='?')
+        out = Value(self.data + other.data,  f'{self.label}+{other.label}', (self, other), '+')
 
         def _backward():
             self.grad += out.grad
@@ -20,10 +21,22 @@ class Value:
         out._backward = _backward
 
         return out
+    
+    def __sub__(self, other):
+        print('sub')
+        other = other if isinstance(other, Value) else Value(other, label='?')
+        out = Value(self.data - other.data,  f'{self.label}-{other.label}', (self, other), '-')
+
+        def _backward():
+            self.grad += out.grad
+            other.grad -= out.grad
+        out._backward = _backward
+
+        return out
 
     def __mul__(self, other):
-        other = other if isinstance(other, Value) else Value(other)
-        out = Value(self.data * other.data, (self, other), '*')
+        other = other if isinstance(other, Value) else Value(other, label='?')
+        out = Value(self.data * other.data,  f'{self.label}*{other.label}', (self, other), '*')
 
         def _backward():
             self.grad += other.data * out.grad
@@ -34,7 +47,7 @@ class Value:
 
     def __pow__(self, other):
         assert isinstance(other, (int, float)), "only supporting int/float powers for now"
-        out = Value(self.data**other, (self,), f'**{other}')
+        out = Value(self.data**other,  f'{self.label}^{other.label}', (self,), f'**{other}')
 
         def _backward():
             self.grad += (other * self.data**(other-1)) * out.grad
@@ -74,9 +87,6 @@ class Value:
 
     def __radd__(self, other): # other + self
         return self + other
-
-    def __sub__(self, other): # self - other
-        return self + (-other)
 
     def __rsub__(self, other): # other - self
         return other + (-self)
