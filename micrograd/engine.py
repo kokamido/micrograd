@@ -2,10 +2,11 @@
 class Value:
     """ stores a single scalar value and its gradient """
 
-    def __init__(self, data, label, _children=(), _op=''):
+    def __init__(self, data, label, _children=(), _op='', show_grads=False):
         self.data = float(data)
         self.label = label
         self.grad = 0
+        self.show_grads = show_grads
         # internal variables used for autograd graph construction
         self._backward = lambda: None
         self._prev = set(_children)
@@ -13,7 +14,7 @@ class Value:
 
     def __add__(self, other):
         other = other if isinstance(other, Value) else Value(other, label='?')
-        out = Value(self.data + other.data,  f'{self.label}+{other.label}', (self, other), '+')
+        out = Value(self.data + other.data,  f'{self.label} + {other.label}', (self, other), '+', show_grads=True)
 
         def _backward():
             self.grad += out.grad
@@ -25,7 +26,7 @@ class Value:
     def __sub__(self, other):
         print('sub')
         other = other if isinstance(other, Value) else Value(other, label='?')
-        out = Value(self.data - other.data,  f'{self.label}-{other.label}', (self, other), '-')
+        out = Value(self.data - other.data,  f'{self.label} - {other.label}', (self, other), '-', show_grads=True)
 
         def _backward():
             self.grad += out.grad
@@ -36,7 +37,7 @@ class Value:
 
     def __mul__(self, other):
         other = other if isinstance(other, Value) else Value(other, label='?')
-        out = Value(self.data * other.data,  f'{self.label}*{other.label}', (self, other), '*')
+        out = Value(self.data * other.data,  f'{self.label} * {other.label}', (self, other), '*', show_grads=True)
 
         def _backward():
             self.grad += other.data * out.grad
@@ -47,7 +48,7 @@ class Value:
 
     def __pow__(self, other):
         assert isinstance(other, (int, float)), "only supporting int/float powers for now"
-        out = Value(self.data**other,  f'{self.label}^{other.label}', (self,), f'**{other}')
+        out = Value(self.data**other,  f'({self.label}) ^ {other}', (self,), f'^{other}', show_grads=True)
 
         def _backward():
             self.grad += (other * self.data**(other-1)) * out.grad
